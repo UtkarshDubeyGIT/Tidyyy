@@ -1,4 +1,6 @@
 # proposed application repository structure
+
+```
 tidyyy/
 ├── cmd/
 │   └── tidyyy/
@@ -50,7 +52,7 @@ tidyyy/
 ├── go.mod
 ├── go.sum
 └── README.md
-
+```
 ## How the pipeline maps to packages
 watcher uses fsnotify to emit events for new files in configured folders. It's purely event-driven — no polling (per F-01).
 triage receives each event and checks: is this a PNG/JPG/PDF? Is it in the exclusion glob list? If eligible, it pushes to the processing queue.
