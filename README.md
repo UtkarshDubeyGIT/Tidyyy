@@ -63,5 +63,33 @@ renamer does the atomic rename — writes the undo record to history first, then
 history is a simple SQLite table: (id, old_path, new_path, renamed_at). Used by the tray's undo action.
 ui is intentionally thin — just systray for the tray daemon and a fyne.io window for settings. No Electron, no web views.
 
+## Developer setup for F-03 extraction (Windows)
+This section is for running the temporary `cmd/f03test` runner locally. The file is a test-only tool and should be deleted before merging to `main`.
+
+1. Install Poppler (pdftotext, pdftoppm):
+```
+winget install --id oschwartz10612.Poppler -e --accept-package-agreements --accept-source-agreements
+```
+2. Install Tesseract OCR:
+```
+winget install --id UB-Mannheim.TesseractOCR -e --accept-package-agreements --accept-source-agreements
+```
+3. Find Poppler bin path (use this if Poppler is not on PATH yet):
+```
+$popplerBin = Get-ChildItem "$env:LOCALAPPDATA\Microsoft\WinGet\Packages" -Directory |
+  Where-Object { $_.Name -like "oschwartz10612.Poppler*" } |
+  Get-ChildItem -Recurse -Directory -Filter bin |
+  Where-Object { Test-Path (Join-Path $_.FullName "pdftotext.exe") } |
+  Select-Object -First 1 -ExpandProperty FullName
+```
+4. Run the F-03 test runner on a PDF:
+```
+go run .\cmd\f03test --file "C:\path\to\sample.pdf" --poppler-bin $popplerBin
+```
+5. Run the F-03 test runner on an image (Tesseract path is the exe):
+```
+go run .\cmd\f03test --file "C:\path\to\image.png" --tesseract-bin "C:\Program Files\Tesseract-OCR\tesseract.exe"
+```
+
 ### Key design decisions from the PRD to keep in mind
 The PRD is strict about a few things that should be baked in early rather than bolted on: the resource ceiling (CPU < 2%, RAM < 80 MB, binary < 50 MB) needs to be tracked from M0, not patched at M3. The namer/slug.go validation layer should be a hard rejection — not a soft warning — so the engine never emits a name that violates the rules. And the history log should be written before the rename, not after, because that's the only way atomicity (C-4) + reversibility (C-6) both hold.

@@ -274,6 +274,12 @@ func resolveBinaryPath(binDir, exe string) string {
 		exeName += ".exe"
 	}
 	if binDir != "" {
+		if strings.HasSuffix(strings.ToLower(binDir), ".exe") {
+			return binDir
+		}
+		if info, err := os.Stat(binDir); err == nil && !info.IsDir() {
+			return binDir
+		}
 		return filepath.Join(binDir, exeName)
 	}
 	if path, err := exec.LookPath(exeName); err == nil {
