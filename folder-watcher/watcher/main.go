@@ -5,24 +5,37 @@ import (
 	"log"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"syscall"
-	"watcher.go/watcher"
+	"github.com/Tiddy/watcher"
 )
 
 func main() {
+	// Determine folder to watch: use first CLI arg, or fall back to ~/Downloads
+	var folderToWatch string
+	if len(os.Args) > 1 {
+		abs, err := filepath.Abs(os.Args[1])
+		if err != nil {
+			log.Fatalf("Invalid path: %v", err)
+		}
+		folderToWatch = abs
+	} else {
+		folderToWatch = filepath.Join(os.Getenv("HOME"), "Downloads")
+		fmt.Println("ℹ️  No folder specified. Usage: go run main.go <folder-path>")
+		fmt.Println("   Falling back to:", folderToWatch)
+	}
+
 	w, err := watcher.New()
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	// Watch your Downloads folder — change this path if needed
-	folderToWatch := os.Getenv("HOME") + "/Downloads"
 	if err := w.AddFolder(folderToWatch); err != nil {
 		log.Fatal(err)
 	}
 
 	fmt.Println("👀 Watching:", folderToWatch)
-	fmt.Println("Drop a file in there to test. Press Ctrl+C to stop.")
+	fmt.Println("Press Ctrl+C to stop.")
 
 	w.Start()
 	defer w.Stop()

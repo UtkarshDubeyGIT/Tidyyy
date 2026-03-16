@@ -1,4 +1,4 @@
-module watcher.go
+module github.com/Tiddy 
 
 go 1.26.1
 
