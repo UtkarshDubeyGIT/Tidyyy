@@ -9,6 +9,8 @@
 *.dylib
 tidyyy-prd.docx
 Tiddy
+tiddy
+dist/
 
 # Test binary, built with `go test -c`
 *.test
