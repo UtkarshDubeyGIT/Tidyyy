@@ -6,7 +6,8 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
-	"watcher.go/watcher"
+
+	"github.com/tidyyy/internal/watcher"
 )
 
 func main() {
