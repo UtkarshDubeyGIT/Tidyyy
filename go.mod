@@ -1,4 +1,4 @@
-module github.com/Tiddy 
+module github.com/tidyyy
 
 go 1.26.1
 

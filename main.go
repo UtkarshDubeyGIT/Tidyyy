@@ -7,7 +7,8 @@ import (
 	"os/signal"
 	"path/filepath"
 	"syscall"
-	"github.com/Tiddy/watcher"
+
+	"github.com/tidyyy/internal/watcher"
 )
 
 func main() {
