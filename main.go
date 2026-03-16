@@ -17,7 +17,7 @@ func main() {
 	}
 
 	// Watch your Downloads folder — change this path if needed
-	folderToWatch := os.Getenv("HOME") + "/Downloads"
+	folderToWatch := os.Getenv("USERPROFILE") + "\\Downloads"
 	if err := w.AddFolder(folderToWatch); err != nil {
 		log.Fatal(err)
 	}
