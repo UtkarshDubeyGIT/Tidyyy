@@ -2,6 +2,10 @@ package watcher
 
 import (
 	"log"
+	"os"
+	"path/filepath"
+	"sync"
+	"time"
 
 	"github.com/fsnotify/fsnotify"
 )
@@ -12,6 +16,8 @@ type Watcher struct {
 	Events  chan string // path of newly created files
 	Errors  chan error
 	done    chan struct{}
+	mu      sync.Mutex
+	pending map[string]*time.Timer
 }
 
 func New() (*Watcher, error) {
@@ -21,16 +27,25 @@ func New() (*Watcher, error) {
 	}
 
 	return &Watcher{
-		fw:     fw,
-		Events: make(chan string, 64), // buffered so we don't block
-		Errors: make(chan error, 8),
-		done:   make(chan struct{}),
+		fw:      fw,
+		Events:  make(chan string, 64), // buffered so we don't block
+		Errors:  make(chan error, 8),
+		done:    make(chan struct{}),
+		pending: make(map[string]*time.Timer),
 	}, nil
 }
 
 // AddFolder registers a folder to be watched
 func (w *Watcher) AddFolder(path string) error {
-	return w.fw.Add(path)
+	return filepath.WalkDir(path, func(p string, d os.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if d.IsDir() {
+			return w.fw.Add(p)
+		}
+		return nil
+	})
 }
 
 // RemoveFolder unregisters a folder
@@ -58,11 +73,20 @@ func (w *Watcher) loop() {
 				return // channel closed
 			}
 
-			// We only care about new files landing in the folder
-			// fsnotify fires Create for new files AND for renames-to
+			// Keep recursive watches for newly-created subdirectories.
 			if event.Has(fsnotify.Create) {
-				log.Printf("[watcher] new file: %s", event.Name)
-				w.Events <- event.Name // forward to pipeline
+				if info, err := os.Stat(event.Name); err == nil && info.IsDir() {
+					if err := w.AddFolder(event.Name); err != nil {
+						w.Errors <- err
+					}
+					continue
+				}
+			}
+
+			if event.Has(fsnotify.Create) || event.Has(fsnotify.Rename) || event.Has(fsnotify.Write) {
+				if info, err := os.Stat(event.Name); err == nil && !info.IsDir() {
+					w.schedule(event.Name)
+				}
 			}
 
 		case err, ok := <-w.fw.Errors:
@@ -75,4 +99,22 @@ func (w *Watcher) loop() {
 			return
 		}
 	}
+}
+
+func (w *Watcher) schedule(path string) {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+
+	if t, ok := w.pending[path]; ok {
+		t.Stop()
+	}
+
+	w.pending[path] = time.AfterFunc(2*time.Second, func() {
+		log.Printf("[watcher] file settled: %s", path)
+		w.Events <- path
+		
+		w.mu.Lock()
+		delete(w.pending, path)
+		w.mu.Unlock()
+	})
 }

@@ -181,7 +181,13 @@ func cleanTokens(text string, stopWords map[string]struct{}, maxTokens int) []st
 	seen := make(map[string]struct{}, len(fields))
 	tokens := make([]string, 0, len(fields))
 	for _, tok := range fields {
+		if len(tok) < 2 {
+			continue
+		}
 		if _, ok := stopWords[tok]; ok {
+			continue
+		}
+		if looksNoisyToken(tok) {
 			continue
 		}
 		if isNumericToken(tok) {
@@ -211,9 +217,47 @@ func isNumericToken(tok string) bool {
 	return true
 }
 
+func looksNoisyToken(tok string) bool {
+	if tok == "" {
+		return true
+	}
+
+	// Drop OCR artifacts with long consonant runs.
+	consecutiveConsonants := 0
+	for _, r := range tok {
+		if strings.ContainsRune("aeiou", r) {
+			consecutiveConsonants = 0
+			continue
+		}
+		if r >= 'a' && r <= 'z' {
+			consecutiveConsonants++
+			if consecutiveConsonants >= 6 {
+				return true
+			}
+		}
+	}
+
+	// Drop tokens dominated by repeated same character.
+	repeat := 1
+	last := rune(0)
+	for _, r := range tok {
+		if r == last {
+			repeat++
+			if repeat >= 4 {
+				return true
+			}
+		} else {
+			repeat = 1
+			last = r
+		}
+	}
+
+	return false
+}
+
 func withDefaults(cfg Config) Config {
 	if cfg.PDFPageLimit <= 0 {
-		cfg.PDFPageLimit = 2
+		cfg.PDFPageLimit = 8
 	}
 	if cfg.MaxOCRBytes <= 0 {
 		cfg.MaxOCRBytes = 20 * 1024 * 1024
@@ -222,7 +266,7 @@ func withDefaults(cfg Config) Config {
 		cfg.MinTextLen = 10
 	}
 	if cfg.MaxTokens <= 0 {
-		cfg.MaxTokens = 24
+		cfg.MaxTokens = 80
 	}
 	if cfg.CommandTimeout <= 0 {
 		cfg.CommandTimeout = 20 * time.Second
@@ -235,6 +279,8 @@ func defaultStopWords() map[string]struct{} {
 		"a", "an", "and", "are", "as", "at", "be", "by", "for", "from",
 		"has", "he", "in", "is", "it", "its", "of", "on", "or", "that",
 		"the", "to", "was", "were", "will", "with", "this", "these", "those",
+		"file", "edit", "view", "history", "bookmarks", "profile", "tab", "window", "help",
+		"llama", "ggml", "metal", "memory", "breakdown", "print", "host", "model", "context",
 	}
 	m := make(map[string]struct{}, len(words))
 	for _, w := range words {

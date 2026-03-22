@@ -2,5 +2,5 @@
 
 mkdir -p dist
 
-go build -o ./dist/tidyyy .
+go build -o ./dist/tidyyy ./cmd/tidyyy
 echo "Build successful: ./dist/tidyyy"

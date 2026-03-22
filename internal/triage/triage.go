@@ -33,7 +33,7 @@ var TargetExtensions = map[string]struct{}{
 var TargetMIMETypes = map[string]string{
 	"image/png":       "png",
 	"image/jpeg":      "jpeg",
-	"image/jpg":        "jpg",
+	"image/jpg":       "jpg",
 	"image/webp":      "webp",
 	"application/pdf": "pdf",
 }
@@ -166,9 +166,13 @@ func detectMIME(path string) (string, error) {
 	defer f.Close()
 
 	buf := make([]byte, 512)
-	n, err := io.ReadAtLeast(f, buf, 1)
-	if err != nil {
+	n, err := f.Read(buf)
+	if err != nil && err != io.EOF {
 		return "", err
+	}
+
+	if n == 0 {
+		return "application/octet-stream", nil
 	}
 
 	return http.DetectContentType(buf[:n]), nil
