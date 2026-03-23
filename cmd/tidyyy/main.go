@@ -15,10 +15,14 @@ import (
 	"time"
 
 	"github.com/joho/godotenv"
+	"github.com/tidyyy/internal/config"
 	"github.com/tidyyy/internal/extractor"
+	"github.com/tidyyy/internal/history"
 	"github.com/tidyyy/internal/monitor"
 	"github.com/tidyyy/internal/namer"
+	"github.com/tidyyy/internal/renamer"
 	"github.com/tidyyy/internal/triage"
+	"github.com/tidyyy/internal/ui"
 	"github.com/tidyyy/internal/watcher"
 )
 
@@ -80,10 +84,38 @@ func getEnvBool(key string, fallback bool) bool {
 	return fallback
 }
 
+func hasArg(flag string) bool {
+	for _, arg := range os.Args[1:] {
+		if arg == flag {
+			return true
+		}
+	}
+	return false
+}
+
 func main() {
 	godotenv.Load() // Ignore error, file might not exist
 
-	watchDirsRaw := getEnv("WATCH_DIRS", "")
+	logger := slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelInfo}))
+	if hasArg("--settings") {
+		if err := ui.ShowSettingsWindow(logger); err != nil {
+			logger.Error("settings ui failed", "err", err)
+			os.Exit(1)
+		}
+		return
+	}
+
+	appCfg, err := config.Load()
+	if err != nil {
+		logger.Warn("failed to load config, using defaults", "err", err)
+		home, homeErr := os.UserHomeDir()
+		if homeErr != nil {
+			home = ""
+		}
+		appCfg = config.Default(home)
+	}
+
+	watchDirsRaw := getEnv("WATCH_DIRS", strings.Join(appCfg.WatchDirs, ","))
 	popplerBin := getEnv("POPPLER_BIN", "")
 	tesseractBin := getEnv("TESSERACT_BIN", "")
 	llamaCLIPath := getEnv("LLAMA_CLI_PATH", "llama-cli")
@@ -91,16 +123,16 @@ func main() {
 	timeoutSec := getEnvInt("TIMEOUT_SEC", 25)
 	pdfPageLimit := getEnvInt("PDF_PAGE_LIMIT", 8)
 	queueDepth := getEnvInt("QUEUE_DEPTH", 64)
-	cloudEnabled := getEnvBool("CLOUD_ENABLED", false)
+	cloudEnabled := getEnvBool("CLOUD_ENABLED", appCfg.CloudEnabled)
 	cloudBaseURL := getEnv("CLOUD_BASE_URL", "")
-	cloudAPIKey := getEnv("CLOUD_API_KEY", "")
+	cloudAPIKey := getEnv("CLOUD_API_KEY", appCfg.CloudAPIKey)
 	cloudModel := getEnv("CLOUD_MODEL", "")
+	maxNameWords := getEnvInt("MAX_NAME_WORDS", appCfg.MaxNameWords)
 	skipRenameOnInvalid := getEnvBool("SKIP_RENAME_ON_INVALID", false)
 	ramLogFile := getEnv("RAM_LOG_FILE", "./log/ram_usage.txt")
 	ramLogIntervalSec := getEnvInt("RAM_LOG_INTERVAL_SEC", 2)
-	dedupTTLSec := getEnvInt("DEDUP_TTL_SEC", 300)  // 5 minutes default
-
-	logger := slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelInfo}))
+	historyLogFile := getEnv("HISTORY_LOG_FILE", "./logs/rename_history.jsonl")
+	dedupTTLSec := getEnvInt("DEDUP_TTL_SEC", 300) // 5 minutes default
 
 	watchDirs, err := resolveWatchDirs(watchDirsRaw)
 	if err != nil {
@@ -127,7 +159,10 @@ func main() {
 		CloudAPIKey:  cloudAPIKey,
 		CloudModel:   cloudModel,
 		UseFallback:  !skipRenameOnInvalid,
+		MaxWords:     maxNameWords,
 	}, logger)
+	historyRecorder := history.NewFileRecorder(historyLogFile)
+	renamerSvc := renamer.New(historyRecorder)
 
 	w, err := watcher.New()
 	if err != nil {
@@ -157,25 +192,31 @@ func main() {
 	}
 
 	w.Start()
-	logger.Info("tidyyy started", "watch_folders", strings.Join(watchDirs, ", "))
+	logger.Info("tidyyy started", "watch_folders", strings.Join(watchDirs, ", "), "config_loaded", "true")
 
 	go func() {
 		for {
 			select {
 			case <-ctx.Done():
+				logger.Info("file watcher stopped")
 				return
 			case path, ok := <-w.Events:
 				if !ok {
+					logger.Info("watcher events channel closed")
 					return
 				}
+				logger.Info("file event received", "path", path)
 				if !d.shouldProcess(path) {
+					logger.Info("file deduplicated or already processed recently", "path", path)
 					continue
 				}
+				logger.Info("file accepted for triage", "path", path)
 				if _, err := tr.Accept(ctx, path); err != nil {
 					logger.Error("triage accept failed", "path", path, "err", err)
 				}
 			case err, ok := <-w.Errors:
 				if !ok {
+					logger.Info("watcher errors channel closed")
 					return
 				}
 				logger.Error("watcher error", "err", err)
@@ -185,15 +226,17 @@ func main() {
 
 	go func() {
 		for job := range tr.Queue() {
-			processFile(ctx, logger, extractorSvc, namerSvc, job.Path)
+			logger.Info("processing file from queue", "path", job.Path)
+			processFile(ctx, logger, extractorSvc, namerSvc, renamerSvc, job.Path)
 		}
+		logger.Info("triage queue drained")
 	}()
 
 	<-ctx.Done()
 	logger.Info("tidyyy stopped")
 }
 
-func processFile(ctx context.Context, logger *slog.Logger, extractorSvc *extractor.Service, namerSvc *namer.Service, path string) {
+func processFile(ctx context.Context, logger *slog.Logger, extractorSvc *extractor.Service, namerSvc *namer.Service, renamerSvc *renamer.Service, path string) {
 	fileCtx, cancel := context.WithTimeout(ctx, 40*time.Second)
 	defer cancel()
 
@@ -226,7 +269,7 @@ func processFile(ctx context.Context, logger *slog.Logger, extractorSvc *extract
 		return
 	}
 
-	renamedPath, err := renameWithConflict(path, slug)
+	renamedPath, err := renamerSvc.RenameWithConflict(path, slug)
 	if err != nil {
 		logger.Error("rename failed", "path", path, "slug", slug, "err", err)
 		return
@@ -234,36 +277,6 @@ func processFile(ctx context.Context, logger *slog.Logger, extractorSvc *extract
 
 	logger.Info("file renamed", "old_path", path, "new_path", renamedPath)
 	fmt.Printf("%s -> %s\n", filepath.Base(path), filepath.Base(renamedPath))
-}
-
-func renameWithConflict(path string, slug string) (string, error) {
-	dir := filepath.Dir(path)
-	ext := filepath.Ext(path)
-
-	baseName := slug + ext
-	candidate := filepath.Join(dir, baseName)
-	if candidate == path {
-		return path, nil
-	}
-
-	if _, err := os.Stat(candidate); errors.Is(err, os.ErrNotExist) {
-		if err := os.Rename(path, candidate); err != nil {
-			return "", err
-		}
-		return candidate, nil
-	}
-
-	for i := 2; i < 1000; i++ {
-		candidate = filepath.Join(dir, fmt.Sprintf("%s-%d%s", slug, i, ext))
-		if _, err := os.Stat(candidate); errors.Is(err, os.ErrNotExist) {
-			if err := os.Rename(path, candidate); err != nil {
-				return "", err
-			}
-			return candidate, nil
-		}
-	}
-
-	return "", fmt.Errorf("unable to find free filename for slug %q", slug)
 }
 
 func resolveWatchDirs(raw string) ([]string, error) {

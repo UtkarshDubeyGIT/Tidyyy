@@ -48,7 +48,7 @@ func TestWatcherDetectsCreatedFile(t *testing.T) {
 		}
 	case err := <-w.Errors:
 		t.Fatalf("watcher error: %v", err)
-	case <-time.After(2 * time.Second):
+	case <-time.After(settleDelay + 2*time.Second):
 		t.Fatal("timed out waiting for create event")
 	}
 }

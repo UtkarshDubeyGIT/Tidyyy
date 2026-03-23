@@ -10,6 +10,8 @@ import (
 	"github.com/fsnotify/fsnotify"
 )
 
+const settleDelay = 2 * time.Second
+
 // Watcher wraps fsnotify and exposes a channel of file events
 type Watcher struct {
 	fw      *fsnotify.Watcher
@@ -109,7 +111,7 @@ func (w *Watcher) schedule(path string) {
 		t.Stop()
 	}
 
-	w.pending[path] = time.AfterFunc(2*time.Second, func() {
+	w.pending[path] = time.AfterFunc(settleDelay, func() {
 		log.Printf("[watcher] file settled: %s", path)
 		w.Events <- path
 		
