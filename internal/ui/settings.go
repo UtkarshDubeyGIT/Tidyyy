@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"image/color"
 	"log/slog"
+	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -20,24 +21,47 @@ import (
 	"github.com/tidyyy/internal/config"
 )
 
+type SettingsLifecycleHooks struct {
+	IsDaemonRunning func() bool
+	StartDaemon     func() error
+	RestartDaemon   func() error
+}
+
 func ShowSettingsWindow(logger *slog.Logger) error {
+	return ShowSettingsWindowWithHooks(logger, nil)
+}
+
+func ShowSettingsWindowWithHooks(logger *slog.Logger, hooks *SettingsLifecycleHooks) error {
+	a := app.NewWithID("com.tidyyy.alpha")
+	a.Settings().SetTheme(newSilentPrecisionTheme())
+	a.SetIcon(appassets.AppIcon)
+
+	w, err := NewSettingsWindow(a, logger, hooks)
+	if err != nil {
+		return err
+	}
+	w.ShowAndRun()
+	return nil
+}
+
+func NewSettingsWindow(a fyne.App, logger *slog.Logger, hooks *SettingsLifecycleHooks) (fyne.Window, error) {
 	if logger == nil {
 		logger = slog.Default()
+	}
+	if a == nil {
+		return nil, fmt.Errorf("nil fyne app")
 	}
 
 	cfg, err := config.Load()
 	if err != nil {
-		return fmt.Errorf("load config: %w", err)
+		return nil, fmt.Errorf("load config: %w", err)
 	}
 
-	a := app.NewWithID("com.tidyyy.alpha")
-	a.Settings().SetTheme(newSilentPrecisionTheme())
-	a.SetIcon(appassets.AppIcon)
 	w := a.NewWindow("Tidyyy Configuration")
 	w.SetIcon(appassets.AppIcon)
 	w.Resize(fyne.NewSize(1060, 720))
 
-	status := widget.NewLabel("Adjust settings, then save to apply on next daemon restart.")
+	status := widget.NewLabel("Adjust settings, then save to apply changes.")
 	status.Wrapping = fyne.TextWrapWord
 	status.TextStyle = fyne.TextStyle{Italic: true}
 
@@ -82,12 +106,44 @@ func ShowSettingsWindow(logger *slog.Logger) error {
 	maxNameHint := widget.NewLabel("Controls slug length for generated file names.")
 	maxNameHint.Wrapping = fyne.TextWrapWord
 
-	saveSettings := func() bool {
-		dirs := parseWatchDirsInput(watchDirs.Text)
-		if len(dirs) == 0 {
-			status.SetText("Add at least one folder to watch.")
+	daemonAffectingFieldsChanged := func(prev config.AppConfig, next config.AppConfig) bool {
+		if prev.CloudEnabled != next.CloudEnabled || prev.MaxNameWords != next.MaxNameWords {
+			return true
+		}
+		if len(prev.WatchDirs) != len(next.WatchDirs) {
+			return true
+		}
+		for i := range prev.WatchDirs {
+			if prev.WatchDirs[i] != next.WatchDirs[i] {
+				return true
+			}
+		}
+		return false
+	}
+
+	countValidWatchDirs := func(paths []string) int {
+		count := 0
+		for _, p := range paths {
+			info, err := os.Stat(p)
+			if err != nil {
+				continue
+			}
+			if info.IsDir() {
+				count++
+			}
+		}
+		return count
+	}
+
+	isDaemonRunning := func() bool {
+		if hooks == nil || hooks.IsDaemonRunning == nil {
 			return false
 		}
+		return hooks.IsDaemonRunning()
+	}
+
+	saveSettings := func() bool {
+		dirs := parseWatchDirsInput(watchDirs.Text)
 
 		words, convErr := strconv.Atoi(maxNameWords.Selected)
 		if convErr != nil {
@@ -107,8 +163,51 @@ func ShowSettingsWindow(logger *slog.Logger) error {
 			return false
 		}
 
+		changed := daemonAffectingFieldsChanged(cfg, next)
+		validDirs := countValidWatchDirs(next.WatchDirs)
+
 		logger.Info("settings saved", "watch_dirs", len(dirs), "cloud_enabled", next.CloudEnabled, "max_name_words", words)
-		status.SetText("Saved to macOS config directory. Restart Tidyyy daemon to apply.")
+
+		if isDaemonRunning() {
+			if changed {
+				dialog.NewConfirm(
+					"Restart Daemon",
+					"Settings that affect daemon behavior changed. Restart daemon now?",
+					func(restartNow bool) {
+						if !restartNow {
+							status.SetText("Saved. Current daemon configuration kept; restart later to apply changes.")
+							return
+						}
+						if hooks == nil || hooks.RestartDaemon == nil {
+							status.SetText("Saved. Restart hook is not configured in this mode.")
+							return
+						}
+						if err := hooks.RestartDaemon(); err != nil {
+							status.SetText("Saved, but daemon restart failed: " + err.Error())
+							return
+						}
+						status.SetText("Saved and daemon restarted with updated settings.")
+					},
+					w,
+				).Show()
+			} else {
+				status.SetText("Saved. Daemon is already running with current settings.")
+			}
+		} else {
+			if validDirs > 0 && hooks != nil && hooks.StartDaemon != nil {
+				if err := hooks.StartDaemon(); err != nil {
+					status.SetText("Saved, but daemon auto-start failed: " + err.Error())
+				} else {
+					status.SetText("Saved and daemon auto-started.")
+				}
+			} else if validDirs == 0 {
+				status.SetText("Saved. No valid watch directories found; daemon remains stopped.")
+			} else {
+				status.SetText("Saved. Restart Tidyyy daemon to apply changes.")
+			}
+		}
+
+		cfg = next
 		return true
 	}
 
@@ -214,8 +313,7 @@ func ShowSettingsWindow(logger *slog.Logger) error {
 
 	root := tonalPanel(surfaceColor, body)
 	w.SetContent(root)
-	w.ShowAndRun()
-	return nil
+	return w, nil
 }
 
 type silentPrecisionTheme struct {

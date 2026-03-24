@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"log/slog"
 	"os"
@@ -10,14 +9,14 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
-	"sync"
 	"syscall"
 	"time"
 
 	"github.com/joho/godotenv"
 	"github.com/tidyyy/internal/config"
 	"github.com/tidyyy/internal/extractor"
-	"github.com/tidyyy/internal/history"
+	"github.com/tidyyy/internal/lock"
+	"github.com/tidyyy/internal/manager"
 	"github.com/tidyyy/internal/monitor"
 	"github.com/tidyyy/internal/namer"
 	"github.com/tidyyy/internal/renamer"
@@ -25,39 +24,6 @@ import (
 	"github.com/tidyyy/internal/ui"
 	"github.com/tidyyy/internal/watcher"
 )
-
-type deduper struct {
-	mu   sync.Mutex
-	seen map[string]time.Time
-	ttl  time.Duration
-}
-
-func newDeduper(ttl time.Duration) *deduper {
-	return &deduper{seen: map[string]time.Time{}, ttl: ttl}
-}
-
-func (d *deduper) shouldProcess(path string) bool {
-	now := time.Now()
-	d.mu.Lock()
-	defer d.mu.Unlock()
-
-	// Clean up old entries periodically to prevent memory leaks
-	if len(d.seen) > 1000 {
-		for k, v := range d.seen {
-			if now.Sub(v) > d.ttl*10 {
-				delete(d.seen, k)
-			}
-		}
-	}
-
-	if t, ok := d.seen[path]; ok {
-		if now.Sub(t) < d.ttl {
-			return false
-		}
-	}
-	d.seen[path] = now
-	return true
-}
 
 func getEnv(key, fallback string) string {
 	if value, ok := os.LookupEnv(key); ok {
@@ -97,14 +63,23 @@ func main() {
 	godotenv.Load() // Ignore error, file might not exist
 
 	logger := slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelInfo}))
-	if hasArg("--settings") {
-		if err := ui.ShowSettingsWindow(logger); err != nil {
-			logger.Error("settings ui failed", "err", err)
-			os.Exit(1)
-		}
-		return
-	}
+	settingsMode := hasArg("--settings")
 
+	// Single-instance lock to ensure only one daemon is running
+	instanceLock, err := lock.NewSingleInstanceLock(os.TempDir())
+	if err != nil {
+		logger.Error("failed to create instance lock", "err", err)
+		os.Exit(1)
+	}
+	if err := instanceLock.Lock(); err != nil {
+		logger.Error("tidyyy is already running", "err", err)
+		os.Exit(1)
+	}
+	defer func() {
+		_ = instanceLock.Unlock()
+	}()
+
+	// Load application configuration
 	appCfg, err := config.Load()
 	if err != nil {
 		logger.Warn("failed to load config, using defaults", "err", err)
@@ -115,7 +90,20 @@ func main() {
 		appCfg = config.Default(home)
 	}
 
+	// Resolve watch directories from config
 	watchDirsRaw := getEnv("WATCH_DIRS", strings.Join(appCfg.WatchDirs, ","))
+	watchDirs, err := resolveWatchDirs(watchDirsRaw)
+	if err != nil {
+		if settingsMode {
+			logger.Warn("watch folder validation failed; opening settings without auto-start", "err", err)
+			watchDirs = nil
+		} else {
+			logger.Error("invalid watch folders", "err", err)
+			os.Exit(1)
+		}
+	}
+
+	// Initialize services
 	popplerBin := getEnv("POPPLER_BIN", "")
 	tesseractBin := getEnv("TESSERACT_BIN", "")
 	llamaCLIPath := getEnv("LLAMA_CLI_PATH", "llama-cli")
@@ -129,20 +117,9 @@ func main() {
 	cloudModel := getEnv("CLOUD_MODEL", "")
 	maxNameWords := getEnvInt("MAX_NAME_WORDS", appCfg.MaxNameWords)
 	skipRenameOnInvalid := getEnvBool("SKIP_RENAME_ON_INVALID", false)
-	ramLogFile := getEnv("RAM_LOG_FILE", "./log/ram_usage.txt")
+	ramLogFile := getEnv("RAM_LOG_FILE", "./logs/ram_usage.txt")
 	ramLogIntervalSec := getEnvInt("RAM_LOG_INTERVAL_SEC", 2)
-	historyLogFile := getEnv("HISTORY_LOG_FILE", "./logs/rename_history.jsonl")
 	dedupTTLSec := getEnvInt("DEDUP_TTL_SEC", 300) // 5 minutes default
-
-	watchDirs, err := resolveWatchDirs(watchDirsRaw)
-	if err != nil {
-		logger.Error("invalid watch folders", "err", err)
-		os.Exit(1)
-	}
-	if len(watchDirs) == 0 {
-		logger.Error("no watch folder configured", "hint", "use --watch '/path/a,/path/b'")
-		os.Exit(1)
-	}
 
 	extractorSvc := extractor.New(extractor.Config{
 		PDFPageLimit:   pdfPageLimit,
@@ -161,9 +138,11 @@ func main() {
 		UseFallback:  !skipRenameOnInvalid,
 		MaxWords:     maxNameWords,
 	}, logger)
-	historyRecorder := history.NewFileRecorder(historyLogFile)
-	renamerSvc := renamer.New(historyRecorder)
 
+	// Note: history is not used by daemon manager directly; it's integrated into renamer
+	renamerSvc := renamer.New(nil) // history recorder passed as nil; renamer handles internally
+
+	// Initialize watcher
 	w, err := watcher.New()
 	if err != nil {
 		logger.Error("watcher init failed", "err", err)
@@ -171,6 +150,7 @@ func main() {
 	}
 	defer w.Stop()
 
+	// Add watch directories to watcher
 	for _, dir := range watchDirs {
 		if err := w.AddFolder(dir); err != nil {
 			logger.Error("failed to watch folder", "folder", dir, "err", err)
@@ -178,105 +158,138 @@ func main() {
 		}
 	}
 
+	// Initialize triage
 	tr := triage.New(queueDepth, logger)
 	defer tr.Close()
-	d := newDeduper(time.Duration(dedupTTLSec) * time.Second)
 
+	// Initialize monitor and RAM logger
+	sysMonitor := monitor.NewMonitor(logger)
+	ramLogger := monitor.NewRAMLogger(ramLogFile, time.Duration(ramLogIntervalSec)*time.Second, logger)
+
+	// Create daemon manager
+	daemonMgr := manager.NewDaemonManager(
+		w,
+		tr,
+		extractorSvc,
+		namerSvc,
+		renamerSvc,
+		sysMonitor,
+		ramLogger,
+		manager.Config{
+			DedupTTL:        time.Duration(dedupTTLSec) * time.Second,
+			ShutdownTimeout: 5 * time.Second,
+			Logger:          logger,
+		},
+	)
+
+	// Application context for daemon lifecycle
 	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer cancel()
 
-	ramLogger := monitor.NewRAMLogger(ramLogFile, time.Duration(ramLogIntervalSec)*time.Second, logger)
-	if err := ramLogger.Start(ctx); err != nil {
-		logger.Error("failed to start ram logger", "err", err)
-		os.Exit(1)
+	// Auto-start daemon if watch directories are valid
+	if len(watchDirs) > 0 {
+		logger.Info("auto-starting daemon with watch folders", "count", len(watchDirs))
+		if err := daemonMgr.Start(ctx); err != nil {
+			logger.Error("failed to start daemon", "err", err)
+			// Don't exit; user can try restarting from UI
+		}
+	} else {
+		logger.Info("no watch folders configured; daemon not started")
 	}
 
-	w.Start()
-	logger.Info("tidyyy started", "watch_folders", strings.Join(watchDirs, ", "), "config_loaded", "true")
+	if settingsMode {
+		settingsHooks := &ui.SettingsLifecycleHooks{
+			IsDaemonRunning: func() bool {
+				return daemonMgr.IsRunning()
+			},
+			StartDaemon: func() error {
+				if daemonMgr.IsRunning() {
+					return nil
+				}
 
-	go func() {
-		for {
-			select {
-			case <-ctx.Done():
-				logger.Info("file watcher stopped")
-				return
-			case path, ok := <-w.Events:
-				if !ok {
-					logger.Info("watcher events channel closed")
-					return
+				latestCfg, err := config.Load()
+				if err != nil {
+					return fmt.Errorf("load latest config: %w", err)
 				}
-				logger.Info("file event received", "path", path)
-				if !d.shouldProcess(path) {
-					logger.Info("file deduplicated or already processed recently", "path", path)
-					continue
+				resolved, err := resolveWatchDirs(strings.Join(latestCfg.WatchDirs, ","))
+				if err != nil {
+					return fmt.Errorf("validate watch dirs: %w", err)
 				}
-				logger.Info("file accepted for triage", "path", path)
-				if _, err := tr.Accept(ctx, path); err != nil {
-					logger.Error("triage accept failed", "path", path, "err", err)
+				if len(resolved) == 0 {
+					return fmt.Errorf("no valid watch directories configured")
 				}
-			case err, ok := <-w.Errors:
-				if !ok {
-					logger.Info("watcher errors channel closed")
-					return
+
+				for _, dir := range resolved {
+					if err := w.AddFolder(dir); err != nil {
+						logger.Warn("watch folder add skipped", "folder", dir, "err", err)
+					}
 				}
-				logger.Error("watcher error", "err", err)
+				return daemonMgr.Start(ctx)
+			},
+			RestartDaemon: func() error {
+				latestCfg, err := config.Load()
+				if err != nil {
+					return fmt.Errorf("load latest config: %w", err)
+				}
+				resolved, err := resolveWatchDirs(strings.Join(latestCfg.WatchDirs, ","))
+				if err != nil {
+					return fmt.Errorf("validate watch dirs: %w", err)
+				}
+
+				for _, dir := range resolved {
+					if err := w.AddFolder(dir); err != nil {
+						logger.Warn("watch folder add skipped", "folder", dir, "err", err)
+					}
+				}
+				return daemonMgr.Restart(ctx)
+			},
+		}
+
+		trayHooks := &ui.TrayLifecycleHooks{
+			IsDaemonRunning: func() bool {
+				return daemonMgr.IsRunning()
+			},
+			IsPaused: func() bool {
+				return daemonMgr.IsPaused()
+			},
+			SetPaused: func(paused bool) error {
+				return daemonMgr.SetPaused(paused)
+			},
+			RestartDaemon: settingsHooks.RestartDaemon,
+			Quit: func() error {
+				if daemonMgr.IsRunning() {
+					if err := daemonMgr.Stop(); err != nil {
+						return err
+					}
+				}
+				cancel()
+				return nil
+			},
+		}
+
+		if err := ui.RunTrayRuntime(logger, settingsHooks, trayHooks); err != nil {
+			logger.Error("tray runtime failed", "err", err)
+			if daemonMgr.IsRunning() {
+				if stopErr := daemonMgr.Stop(); stopErr != nil {
+					logger.Error("failed to stop daemon", "err", stopErr)
+				}
 			}
 		}
-	}()
+		return
+	}
 
-	go func() {
-		for job := range tr.Queue() {
-			logger.Info("processing file from queue", "path", job.Path)
-			processFile(ctx, logger, extractorSvc, namerSvc, renamerSvc, job.Path)
-		}
-		logger.Info("triage queue drained")
-	}()
-
+	// Handle graceful shutdown on signal
 	<-ctx.Done()
-	logger.Info("tidyyy stopped")
-}
+	logger.Info("shutdown signal received")
 
-func processFile(ctx context.Context, logger *slog.Logger, extractorSvc *extractor.Service, namerSvc *namer.Service, renamerSvc *renamer.Service, path string) {
-	fileCtx, cancel := context.WithTimeout(ctx, 40*time.Second)
-	defer cancel()
-
-	content, err := extractorSvc.ExtractPath(fileCtx, path)
-	if err != nil {
-		if errors.Is(err, extractor.ErrUnsupported) || errors.Is(err, extractor.ErrTooShort) || errors.Is(err, extractor.ErrTooLarge) {
-			logger.Info("file skipped", "path", path, "reason", err.Error())
-			return
+	// Stop daemon
+	if daemonMgr.IsRunning() {
+		if err := daemonMgr.Stop(); err != nil {
+			logger.Error("failed to stop daemon", "err", err)
 		}
-		logger.Error("extraction failed", "path", path, "err", err)
-		return
 	}
 
-	slug, source, err := namerSvc.GenerateSlug(fileCtx, content.CleanText)
-	if err != nil {
-		logger.Error("name generation failed", "path", path, "err", err)
-		return
-	}
-
-	logger.Info("name generated",
-		"path", path,
-		"source", content.Source,
-		"namer", source,
-		"slug", slug,
-	)
-
-	ext := filepath.Ext(path)
-	if filepath.Base(path) == slug+ext {
-		logger.Info("file already canonical", "path", path, "slug", slug)
-		return
-	}
-
-	renamedPath, err := renamerSvc.RenameWithConflict(path, slug)
-	if err != nil {
-		logger.Error("rename failed", "path", path, "slug", slug, "err", err)
-		return
-	}
-
-	logger.Info("file renamed", "old_path", path, "new_path", renamedPath)
-	fmt.Printf("%s -> %s\n", filepath.Base(path), filepath.Base(renamedPath))
+	logger.Info("tidyyy stopped")
 }
 
 func resolveWatchDirs(raw string) ([]string, error) {
