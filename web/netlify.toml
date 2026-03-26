@@ -1,0 +1,8 @@
+[build]
+  base = "web"
+  command = "npm install && npm run build"
+  publish = ".next"
+
+[dev]
+  command = "npm run dev"
+  port = 3000
