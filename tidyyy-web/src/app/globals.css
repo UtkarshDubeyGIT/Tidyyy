@@ -1,0 +1,62 @@
+@import "tailwindcss";
+
+:root {
+  --background: #f8f9fa;
+  --foreground: #2b3437;
+  --surface: #f8f9fa;
+  --surface-low: #f1f4f6;
+  --surface-lowest: #ffffff;
+  --surface-high: #e3e9ec;
+  --surface-variant: #dbe4e7;
+  --primary: #446273;
+  --primary-dim: #385666;
+  --outline-variant: rgba(171, 179, 183, 0.3);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-inter);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-inter), sans-serif;
+}
+
+.primary-gradient {
+  background: linear-gradient(145deg, var(--primary), var(--primary-dim));
+}
+
+.glass-panel {
+  background: color-mix(in srgb, var(--surface-variant) 70%, transparent);
+  backdrop-filter: blur(20px);
+}
+
+.ghost-border {
+  border: 1px solid var(--outline-variant);
+}
+
+.ambient-shadow {
+  box-shadow: 0 24px 24px -4px rgba(43, 52, 55, 0.06);
+}
+
+.hero-orb {
+  background: radial-gradient(circle at 20% 20%, rgba(68, 98, 115, 0.24), rgba(68, 98, 115, 0));
+}
+
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.fade-up {
+  animation: fade-up 0.7s ease-out both;
+}
