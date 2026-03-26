@@ -12,7 +12,11 @@ const styles: Record<BadgeVariant, string> = {
   success: "bg-[#c7e7fa] text-[#385565]",
 };
 
-export function Badge({ className, variant = "default", ...props }: BadgeProps) {
+export function Badge({
+  className,
+  variant = "default",
+  ...props
+}: BadgeProps) {
   return (
     <span
       className={cn(

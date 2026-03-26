@@ -48,7 +48,9 @@ export default function Home() {
               <p className="rounded-md bg-(--surface-lowest) p-3 font-mono text-sm ghost-border">
                 Screenshot 2026-03-23 at 14.42.11.png
               </p>
-              <div className="my-4 flex justify-center text-2xl text-(--primary)">↓</div>
+              <div className="my-4 flex justify-center text-2xl text-(--primary)">
+                ↓
+              </div>
               <p className="mb-3 text-xs font-bold uppercase tracking-[0.14rem] text-(--primary)">
                 Renamed
               </p>
@@ -61,7 +63,9 @@ export default function Home() {
 
         <section id="how" className="mx-auto w-full max-w-7xl px-6 md:px-8">
           <div className="mb-10 max-w-2xl space-y-3">
-            <h2 className="text-4xl font-black tracking-tight">The Precision Pipeline</h2>
+            <h2 className="text-4xl font-black tracking-tight">
+              The Precision Pipeline
+            </h2>
             <p className="text-[color-mix(in_srgb,var(--foreground)_74%,white)]">
               Four autonomous stages, built for silent background operation.
             </p>
@@ -97,7 +101,9 @@ export default function Home() {
         <section id="privacy" className="mx-auto w-full max-w-7xl px-6 md:px-8">
           <div className="glass-panel ambient-shadow grid gap-8 rounded-[1.8rem] p-8 md:grid-cols-2 md:p-12">
             <div className="space-y-6">
-              <h2 className="text-4xl font-black tracking-tight">Local-First AI</h2>
+              <h2 className="text-4xl font-black tracking-tight">
+                Local-First AI
+              </h2>
               <p className="text-lg leading-relaxed text-[color-mix(in_srgb,var(--foreground)_74%,white)]">
                 Your files stay on your machine by default. Tidyyy runs local
                 inference first, supports optional cloud fallback only when
@@ -117,7 +123,9 @@ export default function Home() {
         </section>
 
         <section id="faq" className="mx-auto w-full max-w-4xl px-6 md:px-8">
-          <h2 className="mb-8 text-center text-4xl font-black tracking-tight">Frequently Asked</h2>
+          <h2 className="mb-8 text-center text-4xl font-black tracking-tight">
+            Frequently Asked
+          </h2>
           <Accordion>
             <AccordionItem title="How long are generated names?" defaultOpen>
               Tidyyy targets practical 2-5 word slugs to balance readability and

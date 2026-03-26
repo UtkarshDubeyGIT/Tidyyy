@@ -20,7 +20,12 @@ export function CardTitle({
   className,
   ...props
 }: React.HTMLAttributes<HTMLHeadingElement>) {
-  return <h3 className={cn("text-lg font-bold tracking-tight", className)} {...props} />;
+  return (
+    <h3
+      className={cn("text-lg font-bold tracking-tight", className)}
+      {...props}
+    />
+  );
 }
 
 export function CardDescription({
@@ -28,6 +33,12 @@ export function CardDescription({
   ...props
 }: React.HTMLAttributes<HTMLParagraphElement>) {
   return (
-    <p className={cn("text-sm leading-relaxed text-[color-mix(in_srgb,var(--foreground)_75%,white)]", className)} {...props} />
+    <p
+      className={cn(
+        "text-sm leading-relaxed text-[color-mix(in_srgb,var(--foreground)_75%,white)]",
+        className,
+      )}
+      {...props}
+    />
   );
 }

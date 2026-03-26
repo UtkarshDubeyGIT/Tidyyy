@@ -43,7 +43,11 @@ body {
 }
 
 .hero-orb {
-  background: radial-gradient(circle at 20% 20%, rgba(68, 98, 115, 0.24), rgba(68, 98, 115, 0));
+  background: radial-gradient(
+    circle at 20% 20%,
+    rgba(68, 98, 115, 0.24),
+    rgba(68, 98, 115, 0)
+  );
 }
 
 @keyframes fade-up {
