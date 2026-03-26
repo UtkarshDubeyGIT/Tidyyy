@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+
+<html class="scroll-smooth" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Tidyyy - Professional File Management</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "surface-variant": "#dbe4e7",
+              "on-tertiary": "#fbf7ff",
+              "on-secondary-container": "#505257",
+              "surface-container-highest": "#dbe4e7",
+              "on-primary-fixed-variant": "#425f70",
+              "surface-tint": "#446273",
+              "surface-dim": "#d1dce0",
+              "surface": "#f8f9fa",
+              "primary-fixed-dim": "#bad9ec",
+              "on-secondary": "#f8f8ff",
+              "error-dim": "#4e0309",
+              "primary-fixed": "#c7e7fa",
+              "error": "#9f403d",
+              "tertiary": "#5c5d78",
+              "surface-container-lowest": "#ffffff",
+              "on-surface": "#2b3437",
+              "inverse-surface": "#0c0f10",
+              "on-error": "#fff7f6",
+              "secondary-fixed": "#e1e2e9",
+              "on-background": "#2b3437",
+              "secondary-container": "#e1e2e9",
+              "on-tertiary-container": "#4c4c67",
+              "on-tertiary-fixed": "#393953",
+              "outline": "#737c7f",
+              "primary-container": "#c7e7fa",
+              "on-error-container": "#752121",
+              "surface-bright": "#f8f9fa",
+              "on-secondary-fixed-variant": "#595b61",
+              "inverse-on-surface": "#9b9d9e",
+              "on-primary-fixed": "#254352",
+              "on-primary": "#f1f9ff",
+              "outline-variant": "#abb3b7",
+              "on-surface-variant": "#586064",
+              "secondary": "#5d5f65",
+              "on-primary-container": "#385565",
+              "on-secondary-fixed": "#3d3f45",
+              "tertiary-fixed-dim": "#cdccec",
+              "background": "#f8f9fa",
+              "secondary-dim": "#515358",
+              "inverse-primary": "#caeafd",
+              "tertiary-fixed": "#dbdafb",
+              "surface-container": "#eaeff1",
+              "on-tertiary-fixed-variant": "#555671",
+              "primary": "#446273",
+              "error-container": "#fe8983",
+              "surface-container-low": "#f1f4f6",
+              "tertiary-container": "#dbdafb",
+              "secondary-fixed-dim": "#d3d4da",
+              "surface-container-high": "#e3e9ec",
+              "primary-dim": "#385666",
+              "tertiary-dim": "#50516c"
+            },
+            fontFamily: {
+              "headline": ["Inter"],
+              "body": ["Inter"],
+              "label": ["Inter"]
+            },
+            borderRadius: {"DEFAULT": "0.125rem", "lg": "0.25rem", "xl": "0.5rem", "full": "0.75rem"},
+          },
+        },
+      }
+    </script>
+<style>
+      .material-symbols-outlined {
+        font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+      }
+      .glass-panel {
+        background: rgba(219, 228, 231, 0.7);
+        backdrop-filter: blur(20px);
+      }
+      .primary-gradient {
+        background: linear-gradient(145deg, #446273, #385666);
+      }
+      .ghost-border {
+        border: 1px solid rgba(171, 179, 183, 0.3);
+      }
+      .ambient-shadow {
+        box-shadow: 0 24px 24px -4px rgba(43, 52, 55, 0.06);
+      }
+    </style>
+</head>
+<body class="bg-surface text-on-background font-body selection:bg-primary-fixed selection:text-on-primary-fixed">
+<!-- TopNavBar -->
+<nav class="fixed top-0 w-full z-50 bg-slate-50/70 dark:bg-slate-900/70 backdrop-blur-xl transition-all">
+<div class="max-w-7xl mx-auto px-8 h-16 flex justify-between items-center">
+<div class="text-xl font-bold tracking-tighter text-slate-900 dark:text-slate-50 font-headline">Tidyyy</div>
+<div class="hidden md:flex items-center space-x-8">
+<a class="text-slate-900 dark:text-slate-50 font-semibold border-b-2 border-slate-700 dark:border-slate-300 pb-1 font-['Inter'] antialiased text-sm tracking-tight" href="#">How it Works</a>
+<a class="text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-50 transition-colors font-['Inter'] antialiased text-sm tracking-tight" href="#">Privacy</a>
+<a class="text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-50 transition-colors font-['Inter'] antialiased text-sm tracking-tight" href="#">Download</a>
+</div>
+<button class="primary-gradient text-on-primary px-5 py-2 rounded-lg label-md font-semibold active:scale-95 duration-200 ease-in-out">
+                Get Started
+            </button>
+</div>
+<div class="h-[1px] bg-slate-200/15 dark:bg-slate-800/15"></div>
+</nav>
+<main class="pt-32 pb-24 space-y-32">
+<!-- New High-Impact Hero Section -->
+<section class="max-w-7xl mx-auto px-8">
+<div class="flex flex-col md:flex-row items-center gap-16">
+<div class="flex-1 space-y-10">
+<div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-surface-container-high text-on-surface-variant text-xs font-bold tracking-[0.2em] uppercase">
+<span class="w-2 h-2 rounded-full bg-primary animate-pulse"></span>
+                        V1.0.4 Now Available
+                    </div>
+<h1 class="text-6xl md:text-8xl font-black tracking-tighter text-on-surface leading-[0.9] max-w-2xl font-headline">
+                        Your file system, finally human.
+                    </h1>
+<p class="text-xl text-on-surface-variant font-light leading-relaxed max-w-lg">
+                        Tidyyy uses local-first AI to automatically rename your downloads, screenshots, and documents into human-readable gold. No cloud, no subscription, just order.
+                    </p>
+<div class="flex flex-wrap items-center gap-4">
+<button class="primary-gradient text-on-primary px-8 py-4 rounded-xl font-bold ambient-shadow active:scale-95 transition-all">
+                            Download for macOS
+                        </button>
+<button class="px-8 py-4 text-primary font-bold hover:bg-surface-container-low transition-colors rounded-xl ghost-border">
+                            View Demo
+                        </button>
+</div>
+</div>
+<div class="flex-1 relative w-full">
+<div class="absolute inset-0 bg-primary/5 blur-[120px] rounded-full"></div>
+<!-- Asymmetric Glassmorphic UI Panel -->
+<div class="relative glass-panel rounded-3xl p-6 border border-white/40 ambient-shadow transform rotate-1 md:rotate-2 hover:rotate-0 transition-transform duration-500">
+<div class="flex items-center justify-between mb-8 border-b border-on-surface/5 pb-4">
+<div class="flex items-center gap-2">
+<div class="w-3 h-3 rounded-full bg-red-400/50"></div>
+<div class="w-3 h-3 rounded-full bg-amber-400/50"></div>
+<div class="w-3 h-3 rounded-full bg-green-400/50"></div>
+</div>
+<span class="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant/60">Tidyyy Activity</span>
+</div>
+<div class="space-y-6">
+<div class="space-y-2">
+<div class="flex items-center gap-2 text-[10px] uppercase tracking-tighter text-on-surface-variant font-bold opacity-50">
+<span class="material-symbols-outlined text-xs" data-icon="history">history</span> Original
+                                </div>
+<div class="bg-surface-container-lowest/50 p-3 rounded-lg font-mono text-xs text-on-surface-variant truncate border border-on-surface/5">
+                                    Screenshot 2024-03-21 at 14.22.09.png
+                                </div>
+</div>
+<div class="flex justify-center -my-2 relative z-10">
+<div class="bg-primary p-1.5 rounded-full shadow-lg">
+<span class="material-symbols-outlined text-on-primary text-sm" data-icon="arrow_downward">arrow_downward</span>
+</div>
+</div>
+<div class="space-y-2">
+<div class="flex items-center gap-2 text-[10px] uppercase tracking-tighter text-primary font-bold">
+<span class="material-symbols-outlined text-xs" data-icon="auto_awesome">auto_awesome</span> Renamed
+                                </div>
+<div class="bg-primary-dim p-4 rounded-lg font-mono text-sm text-on-primary truncate shadow-inner">
+                                    q1-revenue-chart-dark-mode.png
+                                </div>
+</div>
+</div>
+<div class="mt-8 pt-4 border-t border-on-surface/5 flex items-center justify-between">
+<div class="flex -space-x-2">
+<div class="w-6 h-6 rounded-full bg-surface-container-high border-2 border-white"></div>
+<div class="w-6 h-6 rounded-full bg-surface-variant border-2 border-white"></div>
+<div class="w-6 h-6 rounded-full bg-primary-fixed border-2 border-white"></div>
+</div>
+<div class="text-[10px] font-medium text-on-surface-variant/40">Status: Optimized</div>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Chaos to Clarity (Asymmetric Cards) -->
+<section class="max-w-7xl mx-auto px-8">
+<div class="grid grid-cols-1 md:grid-cols-12 gap-8 items-center">
+<div class="md:col-span-5 space-y-6">
+<h2 class="text-4xl font-black tracking-tight leading-tight">Chaos to Clarity</h2>
+<p class="text-on-surface-variant text-lg">Your desktop is a graveyard of generic filenames. Tidyyy breathes context back into your storage using high-precision semantic analysis.</p>
+</div>
+<div class="md:col-span-7 grid grid-cols-1 md:grid-cols-2 gap-4">
+<div class="bg-surface-container-low p-8 rounded-xl space-y-4 ghost-border">
+<span class="label-sm tracking-widest text-error uppercase font-bold">The Chaos</span>
+<div class="p-4 bg-surface-container-lowest rounded-lg ghost-border font-mono text-sm text-on-surface-variant truncate">
+                            Screenshot 2026-03-23 at 14.42.11.png
+                        </div>
+</div>
+<div class="bg-primary p-8 rounded-xl space-y-4 ambient-shadow transform md:translate-y-12">
+<span class="label-sm tracking-widest text-on-primary uppercase font-bold">The Clarity</span>
+<div class="p-4 bg-primary-dim rounded-lg text-on-primary font-mono text-sm truncate">
+                            q1-revenue-dashboard.png
+                        </div>
+</div>
+</div>
+</div>
+</section>
+<!-- The Precision Pipeline (Horizontal Flow) -->
+<section class="bg-surface-container-low py-24">
+<div class="max-w-7xl mx-auto px-8">
+<div class="text-center mb-16">
+<h2 class="text-4xl font-black tracking-tight mb-4">The Precision Pipeline</h2>
+<p class="text-on-surface-variant">Four autonomous stages working in perfect silence.</p>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-4 gap-2">
+<!-- Step 1 -->
+<div class="group bg-surface p-8 rounded-xl transition-all hover:bg-surface-container-lowest">
+<div class="mb-6 flex justify-between items-start">
+<span class="material-symbols-outlined text-primary text-4xl" data-icon="visibility">visibility</span>
+<span class="text-4xl font-black text-outline/10">01</span>
+</div>
+<h3 class="text-lg font-bold mb-2">Watcher</h3>
+<p class="text-sm text-on-surface-variant">Silent background service monitors your chosen folders for new arrivals.</p>
+</div>
+<!-- Step 2 -->
+<div class="group bg-surface p-8 rounded-xl transition-all hover:bg-surface-container-lowest">
+<div class="mb-6 flex justify-between items-start">
+<span class="material-symbols-outlined text-primary text-4xl" data-icon="rule">rule</span>
+<span class="text-4xl font-black text-outline/10">02</span>
+</div>
+<h3 class="text-lg font-bold mb-2">Triage</h3>
+<p class="text-sm text-on-surface-variant">Classifies file types and determines the appropriate naming logic in milliseconds.</p>
+</div>
+<!-- Step 3 -->
+<div class="group bg-surface p-8 rounded-xl transition-all hover:bg-surface-container-lowest">
+<div class="mb-6 flex justify-between items-start">
+<span class="material-symbols-outlined text-primary text-4xl" data-icon="description">description</span>
+<span class="text-4xl font-black text-outline/10">03</span>
+</div>
+<h3 class="text-lg font-bold mb-2">Extractor</h3>
+<p class="text-sm text-on-surface-variant">Pulls semantic keywords, dates, and intent directly from file contents.</p>
+</div>
+<!-- Step 4 -->
+<div class="group bg-surface p-8 rounded-xl transition-all hover:bg-surface-container-lowest">
+<div class="mb-6 flex justify-between items-start">
+<span class="material-symbols-outlined text-primary text-4xl" data-icon="spellcheck">spellcheck</span>
+<span class="text-4xl font-black text-outline/10">04</span>
+</div>
+<h3 class="text-lg font-bold mb-2">Namer</h3>
+<p class="text-sm text-on-surface-variant">Applies your custom syntax rules to generate a perfect, unique filename.</p>
+</div>
+</div>
+</div>
+</section>
+<!-- Privacy Section (Local-First AI) -->
+<section class="max-w-7xl mx-auto px-8">
+<div class="glass-panel p-12 rounded-3xl grid grid-cols-1 md:grid-cols-2 gap-12 items-center ghost-border ambient-shadow">
+<div class="order-2 md:order-1">
+<h2 class="text-4xl font-black tracking-tight mb-6">Local-First AI</h2>
+<p class="text-on-surface-variant text-lg mb-8 leading-relaxed">
+                        Your files never leave your machine. Tidyyy runs small, hyper-efficient neural networks directly on your CPU/GPU. No cloud uploads, no "training data" privacy leaks, just No Cloud Dependency.
+                    </p>
+<div class="flex flex-wrap gap-4">
+<div class="flex items-center gap-2 px-4 py-2 bg-primary-container rounded-full text-on-primary-container font-medium text-sm">
+<span class="material-symbols-outlined text-sm" data-icon="lock">lock</span>
+                            End-to-End Privacy
+                        </div>
+<div class="flex items-center gap-2 px-4 py-2 bg-tertiary-container rounded-full text-on-tertiary-container font-medium text-sm">
+<span class="material-symbols-outlined text-sm" data-icon="offline_bolt">offline_bolt</span>
+                            Offline Capable
+                        </div>
+</div>
+</div>
+<div class="order-1 md:order-2 flex justify-center">
+<div class="w-64 h-64 rounded-full bg-gradient-to-br from-primary to-primary-container flex items-center justify-center ambient-shadow">
+<span class="material-symbols-outlined text-surface text-8xl" data-icon="security" style="font-variation-settings: 'FILL' 1;">security</span>
+</div>
+</div>
+</div>
+</section>
+<!-- Supported Formats (Bento Style) -->
+<section class="max-w-7xl mx-auto px-8">
+<div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+<div class="bg-surface-container-low p-8 rounded-2xl flex flex-col items-center justify-center gap-4 transition-transform hover:-translate-y-1">
+<span class="material-symbols-outlined text-primary text-5xl" data-icon="image">image</span>
+<span class="font-bold tracking-tighter text-on-surface">PNG</span>
+</div>
+<div class="bg-surface-container-low p-8 rounded-2xl flex flex-col items-center justify-center gap-4 transition-transform hover:-translate-y-1">
+<span class="material-symbols-outlined text-primary text-5xl" data-icon="photo_camera">photo_camera</span>
+<span class="font-bold tracking-tighter text-on-surface">JPG</span>
+</div>
+<div class="bg-surface-container-low p-8 rounded-2xl flex flex-col items-center justify-center gap-4 transition-transform hover:-translate-y-1">
+<span class="material-symbols-outlined text-primary text-5xl" data-icon="animation">animation</span>
+<span class="font-bold tracking-tighter text-on-surface">WEBP</span>
+</div>
+<div class="bg-surface-container-low p-8 rounded-2xl flex flex-col items-center justify-center gap-4 transition-transform hover:-translate-y-1">
+<span class="material-symbols-outlined text-primary text-5xl" data-icon="picture_as_pdf">picture_as_pdf</span>
+<span class="font-bold tracking-tighter text-on-surface">PDF</span>
+</div>
+</div>
+</section>
+<!-- FAQ Section -->
+<section class="max-w-4xl mx-auto px-8">
+<h2 class="text-4xl font-black tracking-tight mb-12 text-center">Frequently Asked</h2>
+<div class="space-y-4">
+<details class="group bg-surface-container-lowest rounded-xl ghost-border overflow-hidden">
+<summary class="p-6 list-none cursor-pointer flex justify-between items-center font-bold">
+                        How long are the generated names?
+                        <span class="material-symbols-outlined group-open:rotate-180 transition-transform" data-icon="expand_more">expand_more</span>
+</summary>
+<div class="px-6 pb-6 text-on-surface-variant text-sm leading-relaxed">
+                        Tidyyy follows a semantic rule of 2-5 words per filename to maintain balance between context and file system brevity.
+                    </div>
+</details>
+<details class="group bg-surface-container-lowest rounded-xl ghost-border overflow-hidden">
+<summary class="p-6 list-none cursor-pointer flex justify-between items-center font-bold">
+                        What happens if two files are similar?
+                        <span class="material-symbols-outlined group-open:rotate-180 transition-transform" data-icon="expand_more">expand_more</span>
+</summary>
+<div class="px-6 pb-6 text-on-surface-variant text-sm leading-relaxed">
+                        We use an intelligent conflict resolution system. Instead of generic dates, we apply -2, -3 suffixes while maintaining the semantic root of the filename.
+                    </div>
+</details>
+<details class="group bg-surface-container-lowest rounded-xl ghost-border overflow-hidden">
+<summary class="p-6 list-none cursor-pointer flex justify-between items-center font-bold">
+                        Will it slow down my computer?
+                        <span class="material-symbols-outlined group-open:rotate-180 transition-transform" data-icon="expand_more">expand_more</span>
+</summary>
+<div class="px-6 pb-6 text-on-surface-variant text-sm leading-relaxed">
+                        No. Tidyyy is built in Rust with a minimal CPU/RAM footprint. It remains dormant until a new file triggers the watcher, utilizing idle cycles for inference.
+                    </div>
+</details>
+</div>
+</section>
+<!-- Final CTA -->
+<section class="max-w-7xl mx-auto px-8">
+<div class="primary-gradient p-16 rounded-[2rem] text-center space-y-8 ambient-shadow relative overflow-hidden">
+<div class="absolute -top-24 -right-24 w-96 h-96 bg-white/5 rounded-full blur-3xl"></div>
+<h2 class="text-5xl font-black text-on-primary tracking-tighter leading-none">Ready to tidy your digital life?</h2>
+<p class="text-on-primary/80 text-xl max-w-xl mx-auto">Join 10,000+ power users who never look at a "Screen Shot..." filename again.</p>
+<div class="flex flex-col md:flex-row justify-center gap-4 pt-4">
+<button class="bg-surface text-primary px-10 py-5 rounded-2xl font-bold text-lg hover:bg-primary-container transition-colors active:scale-95 duration-200">
+                        Download for Desktop
+                    </button>
+<button class="bg-primary-dim text-on-primary px-10 py-5 rounded-2xl font-bold text-lg border border-on-primary/10 hover:bg-primary-dim/80 transition-colors">
+                        Get Open Source
+                    </button>
+</div>
+</div>
+</section>
+</main>
+<!-- Footer -->
+<footer class="w-full border-t border-slate-200/50 dark:border-slate-800/50 bg-slate-100 dark:bg-slate-950">
+<div class="max-w-7xl mx-auto px-8 py-12 flex flex-col md:flex-row justify-between items-center gap-6">
+<div class="space-y-2 text-center md:text-left">
+<div class="text-lg font-black text-slate-900 dark:text-slate-100 font-headline">Tidyyy</div>
+<p class="text-slate-600 dark:text-slate-400 font-['Inter'] text-xs uppercase tracking-[0.05rem] font-medium max-w-xs">
+                    © 2024 Tidyyy. Local-first, privacy-focused file management.
+                </p>
+</div>
+<div class="flex flex-wrap justify-center gap-8">
+<a class="text-slate-500 dark:text-slate-500 hover:text-slate-900 dark:hover:text-slate-200 transition-colors font-['Inter'] text-xs uppercase tracking-[0.05rem] font-medium" href="#">Terms of Service</a>
+<a class="text-slate-500 dark:text-slate-500 hover:text-slate-900 dark:hover:text-slate-200 transition-colors font-['Inter'] text-xs uppercase tracking-[0.05rem] font-medium" href="#">Privacy Policy</a>
+<a class="text-slate-500 dark:text-slate-500 hover:text-slate-900 dark:hover:text-slate-200 transition-colors font-['Inter'] text-xs uppercase tracking-[0.05rem] font-medium" href="#">Cookie Settings</a>
+<a class="text-slate-500 dark:text-slate-500 hover:text-slate-900 dark:hover:text-slate-200 transition-colors font-['Inter'] text-xs uppercase tracking-[0.05rem] font-medium" href="#">Twitter</a>
+<a class="text-slate-500 dark:text-slate-500 hover:text-slate-900 dark:hover:text-slate-200 transition-colors font-['Inter'] text-xs uppercase tracking-[0.05rem] font-medium" href="#">GitHub</a>
+</div>
+</div>
+</footer>
+</body></html>
