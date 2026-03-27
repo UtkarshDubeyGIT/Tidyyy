@@ -3,6 +3,7 @@ package config
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -81,6 +82,7 @@ func Save(cfg AppConfig) error {
 
 func path() (string, error) {
 	base, err := os.UserConfigDir()
+	fmt.Println("base: ", base)
 	if err != nil {
 		return "", err
 	}
@@ -114,5 +116,6 @@ func normalize(cfg *AppConfig) {
 		seen[abs] = struct{}{}
 		cleaned = append(cleaned, abs)
 	}
+	fmt.Println(cfg)
 	cfg.WatchDirs = cleaned
 }

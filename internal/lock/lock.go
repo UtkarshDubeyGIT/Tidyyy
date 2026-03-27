@@ -37,20 +37,6 @@ func NewSingleInstanceLock(lockDir string) (SingleInstanceLock, error) {
 
 // Lock acquires the lock; returns error if already locked.
 func (fl *fileLock) Lock() error {
-	if fl.locked {
-		return nil
-	}
-
-	if _, err := os.Stat(fl.lockPath); err == nil {
-		return ErrAlreadyLocked
-	}
-
-	f, err := os.Create(fl.lockPath)
-	if err != nil {
-		return fmt.Errorf("create lock file: %w", err)
-	}
-	_ = f.Close()
-
 	fl.locked = true
 	return nil
 }

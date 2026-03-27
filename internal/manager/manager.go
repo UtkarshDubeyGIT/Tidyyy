@@ -61,14 +61,14 @@ type daemonManager struct {
 	paused          bool
 	throttleGate    atomic.Bool
 
-	watcher       *watcher.Watcher
-	triager       *triage.Triager
-	extractorSvc  *extractor.Service
-	namerSvc      *namer.Service
-	renamerSvc    *renamer.Service
-	monitor       monitor.Monitor
-	ramLogger     *monitor.RAMLogger
-	logger        *slog.Logger
+	watcher      *watcher.Watcher
+	triager      *triage.Triager
+	extractorSvc *extractor.Service
+	namerSvc     *namer.Service
+	renamerSvc   *renamer.Service
+	monitor      monitor.Monitor
+	ramLogger    *monitor.RAMLogger
+	logger       *slog.Logger
 
 	metricsC      chan MetricsUpdate
 	processingSem *semaphore.Weighted
@@ -206,8 +206,10 @@ func (dm *daemonManager) metricSubscriber() {
 			if !ok {
 				return
 			}
-			newThrottle := update.CPUPercent > 60 || update.BatteryLevel < 15
+			// newThrottle := update.CPUPercent > 90 || update.BatteryLevel < 15
+			newThrottle := false
 			dm.throttleGate.Store(newThrottle)
+
 
 			dm.mu.RLock()
 			paused := dm.paused
